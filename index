@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RegexPlayground - 正则表达式测试器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+        header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 14px 28px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .logo { font-size: 20px; font-weight: bold; }
+        .logo span { color: #f97583; }
+        .logo .slash { color: #79c0ff; font-weight: 400; }
+        .header-btns { display: flex; gap: 6px; }
+        .h-btn {
+            padding: 6px 14px; background: #21262d;
+            border: 1px solid #30363d; color: #8b949e;
+            border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.2s;
+        }
+        .h-btn:hover { background: #30363d; color: white; }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+        /* 正则输入 */
+        .regex-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .regex-row { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+        .regex-slash { font-size: 28px; color: #79c0ff; font-weight: 300; }
+        .regex-input {
+            flex: 1; padding: 12px 16px;
+            background: #0d1117; border: 1px solid #30363d;
+            color: #f97583; border-radius: 10px;
+            font-family: 'Fira Code', monospace; font-size: 18px;
+            outline: none; letter-spacing: 1px;
+        }
+        .regex-input:focus { border-color: #f97583; box-shadow: 0 0 0 3px rgba(249,117,131,0.1); }
+        .flags-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        .flag-btn {
+            padding: 6px 14px; background: rgba(255,255,255,0.03);
+            border: 1px solid #30363d; color: #8b949e;
+            border-radius: 8px; cursor: pointer; font-size: 13px;
+            font-family: 'Fira Code', monospace; transition: 0.2s;
+        }
+        .flag-btn:hover { border-color: #484f58; }
+        .flag-btn.active { border-color: #f97583; color: #f97583; background: rgba(249,117,131,0.08); }
+        .regex-error {
+            font-size: 13px; color: #f85149; margin-top: 10px;
+            padding: 8px 14px; background: rgba(248,81,73,0.06);
+            border-radius: 8px; display: none;
+        }
+        .regex-error.show { display: block; }
+
+        /* 测试文本 */
+        .test-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .test-card h3 { font-size: 14px; color: #8b949e; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .test-area {
+            width: 100%; min-height: 160px;
+            background: #0d1117; border: 1px solid #30363d;
+            color: #c9d1d9; border-radius: 10px;
+            padding: 16px; font-family: 'Fira Code', monospace;
+            font-size: 14px; line-height: 1.8;
+            outline: none; resize: vertical;
+        }
+        .test-area:focus { border-color: #388bfd; }
+        .test-area::placeholder { color: #21262d; }
+        /* 高亮结果展示 */
+        .result-display {
+            width: 100%; min-height: 160px;
+            background: #0d1117; border: 1px solid #30363d;
+            border-radius: 10px; padding: 16px;
+            font-family: 'Fira Code', monospace; font-size: 14px;
+            line-height: 1.8; white-space: pre-wrap; word-break: break-all;
+        }
+        .match-hl {
+            background: rgba(249,117,131,0.2);
+            border: 1px solid rgba(249,117,131,0.3);
+            border-radius: 3px;
+            padding: 0 2px;
+            color: #f97583;
+        }
+        .match-group {
+            background: rgba(121,192,255,0.15);
+            border-bottom: 2px solid #79c0ff;
+        }
+
+        /* 匹配结果面板 */
+        .matches-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .matches-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 14px;
+        }
+        .matches-header h3 { font-size: 14px; color: #8b949e; }
+        .match-count {
+            font-size: 13px; padding: 4px 12px;
+            background: rgba(249,117,131,0.1);
+            border-radius: 20px; color: #f97583;
+        }
+        .match-table { width: 100%; border-collapse: collapse; }
+        .match-table th, .match-table td {
+            text-align: left; padding: 10px 14px;
+            border-bottom: 1px solid #21262d;
+            font-size: 13px;
+        }
+        .match-table th { color: #8b949e; font-weight: 500; }
+        .match-table td { font-family: 'Fira Code', monospace; }
+        .match-val { color: #f97583; }
+        .match-idx { color: #79c0ff; }
+        .match-grp { color: #d2a8ff; }
+        .no-matches { text-align: center; color: #30363d; padding: 24px; font-size: 14px; }
+
+        /* 常用模板 */
+        .templates-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .templates-card h3 { font-size: 14px; color: #8b949e; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+        .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+        .template-item {
+            padding: 12px 16px;
+            background: #0d1117; border: 1px solid #21262d;
+            border-radius: 10px; cursor: pointer; transition: 0.2s;
+        }
+        .template-item:hover { border-color: #30363d; }
+        .template-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .template-regex { font-family: 'Fira Code', monospace; font-size: 11px; color: #f97583; word-break: break-all; }
+
+        /* 解释面板 */
+        .explain-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 14px;
+            padding: 24px;
+        }
+        .explain-card h3 { font-size: 14px; color: #8b949e; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+        .explain-list { display: flex; flex-direction: column; gap: 6px; }
+        .explain-item {
+            display: flex; gap: 12px; padding: 8px 12px;
+            background: #0d1117; border-radius: 8px; align-items: center;
+        }
+        .explain-token {
+            font-family: 'Fira Code', monospace; font-size: 14px;
+            color: #f97583; min-width: 60px; font-weight: 600;
+        }
+        .explain-desc { font-size: 13px; color: #8b949e; }
+
+        .toast {
+            position: fixed; bottom: 30px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #161b22; border: 1px solid #30363d;
+            color: white; padding: 12px 28px; border-radius: 12px;
+            font-size: 14px; opacity: 0; transition: 0.3s; z-index: 200;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        @media (max-width: 600px) {
+            .regex-input { font-size: 14px; }
+            .template-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo"><span class="slash">/</span>Regex<span>Playground</span><span class="slash">/g</span></div>
+        <div class="header-btns">
+            <button class="h-btn" onclick="shareRegex()">🔗 分享</button>
+            <button class="h-btn" onclick="clearAll()">🗑 清空</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 正则输入 -->
+        <div class="regex-card">
+            <div class="regex-row">
+                <span class="regex-slash">/</span>
+                <input class="regex-input" id="regexInput" placeholder="输入正则表达式..." value="(\w+)@(\w+)\.(\w+)" oninput="runMatch()">
+                <span class="regex-slash">/</span>
+            </div>
+            <div class="flags-row">
+                <button class="flag-btn active" id="flag-g" onclick="toggleFlag('g')">g <span style="color:#484f58">全局</span></button>
+                <button class="flag-btn" id="flag-i" onclick="toggleFlag('i')">i <span style="color:#484f58">忽略大小写</span></button>
+                <button class="flag-btn active" id="flag-m" onclick="toggleFlag('m')">m <span style="color:#484f58">多行</span></button>
+                <button class="flag-btn" id="flag-s" onclick="toggleFlag('s')">s <span style="color:#484f58">dotAll</span></button>
+                <button class="flag-btn" id="flag-u" onclick="toggleFlag('u')">u <span style="color:#484f58">Unicode</span></button>
+            </div>
+            <div class="regex-error" id="regexError"></div>
+        </div>
+
+        <!-- 测试文本 & 高亮结果 -->
+        <div class="test-card">
+            <h3>📝 测试文本</h3>
+            <textarea class="test-area" id="testText" placeholder="输入测试文本..." oninput="runMatch()">Hello, my email is john@example.com and my backup email is jane.doe@gmail.com
+You can also reach me at admin@company.org
+Invalid emails: @test.com, user@, hello@.com</textarea>
+        </div>
+
+        <div class="test-card">
+            <h3>🎯 匹配高亮</h3>
+            <div class="result-display" id="resultDisplay"></div>
+        </div>
+
+        <!-- 匹配详情 -->
+        <div class="matches-card">
+            <div class="matches-header">
+                <h3>📊 匹配详情</h3>
+                <span class="match-count" id="matchCount">0 个匹配</span>
+            </div>
+            <div id="matchesBody"></div>
+        </div>
+
+        <!-- 正则解释 -->
+        <div class="explain-card">
+            <h3>💡 正则解释</h3>
+            <div class="explain-list" id="explainList"></div>
+        </div>
+
+        <!-- 常用模板 -->
+        <div class="templates-card">
+            <h3>📋 常用正则模板</h3>
+            <div class="template-grid" id="templateGrid"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ========== 状态 ==========
+        let flags = { g: true, i: false, m: true, s: false, u: false };
+
+        // ========== 模板 ==========
+        const TEMPLATES = [
+            { name: '邮箱地址', regex: '[\\w.-]+@[\\w.-]+\\.\\w+', test: 'user@example.com\ninvalid@.com' },
+            { name: '手机号码 (中国)', regex: '1[3-9]\\d{9}', test: '13812345678\n12345678901' },
+            { name: 'URL 链接', regex: 'https?://[\\w.-]+(?:/[\\w./?%&=-]*)?', test: 'Visit https://example.com/path?q=1' },
+            { name: 'IPv4 地址', regex: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b', test: '192.168.1.1\n999.999.999.999' },
+            { name: 'HTML 标签', regex: '<([a-z]+)[^>]*>.*?</\\1>', test: '<div class="a">text</div>' },
+            { name: '日期 (YYYY-MM-DD)', regex: '\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])', test: '2024-01-15\n2024-13-01' },
+            { name: '十六进制颜色', regex: '#(?:[0-9a-fA-F]{3}){1,2}\\b', test: '#ff6b6b #abc #12345g' },
+            { name: '身份证号', regex: '[1-9]\\d{5}(?:19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]', test: '110101199001011234' },
+            { name: '密码强度 (≥8位,含大小写+数字)', regex: '(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}', test: 'Abc12345\npassword' },
+            { name: '中文字符', regex: '[\\u4e00-\\u9fa5]+', test: '你好Hello世界World' },
+            { name: 'JSON 键值对', regex: '"(\\w+)"\\s*:\\s*"([^"]*)"', test: '{"name": "Alice", "age": "25"}' },
+            { name: 'Markdown 标题', regex: '^#{1,6}\\s+.+$', test: '# Title\n## Subtitle\nNormal text' },
+        ];
+
+        // ========== 正则语法解释 ==========
+        const TOKEN_MAP = [
+            { pattern: /\\\w/, explain: (t) => {
+                const map = {'\\d':'数字 [0-9]','\\D':'非数字','\\w':'单词字符 [a-zA-Z0-9_]','\\W':'非单词字符','\\s':'空白字符','\\S':'非空白字符','\\b':'单词边界','\\B':'非单词边界','\\n':'换行','\\t':'制表符','\\.':'转义点号','\\+':'转义加号','\\*':'转义星号','\\?':'转义问号'};
+                return map[t] || `转义: ${t}`;
+            }},
+            { pattern: /\[.*?\]/, explain: (t) => `字符集: 匹配 ${t} 中的任意字符` },
+            { pattern: /\(.*?\)/, explain: (t) => {
+                if (t.startsWith('(?:')) return `非捕获组: ${t}`;
+                if (t.startsWith('(?=')) return `正向前瞻: ${t}`;
+                if (t.startsWith('(?!')) return `负向前瞻: ${t}`;
+                return `捕获组: ${t}`;
+            }},
+            { pattern: /\{.*?\}/, explain: (t) => `量词: 重复 ${t} 次` },
+            { pattern: /[+*?]/, explain: (t) => {
+                return {'*':'零次或多次','+':'一次或多次','?':'零次或一次'}[t];
+            }},
+            { pattern: /\^/, explain: () => '行/字符串开头' },
+            { pattern: /\$/, explain: () => '行/字符串结尾' },
+            { pattern: /\./, explain: () => '任意字符 (除换行)' },
+            { pattern: /\|/, explain: () => '或 (alternation)' },
+        ];
+
+        // ========== 核心匹配 ==========
+        function runMatch() {
+            const regexStr = document.getElementById('regexInput').value;
+            const testStr = document.getElementById('testText').value;
+            const errorEl = document.getElementById('regexError');
+
+            if (!regexStr) {
+                document.getElementById('resultDisplay').textContent = testStr;
+                document.getElementById('matchesBody').innerHTML = '<div class="no-matches">输入正则表达式开始匹配</div>';
+                document.getElementById('matchCount').textContent = '0 个匹配';
+                errorEl.classList.remove('show');
+                explainRegex(regexStr);
+                return;
+            }
+
+            const flagStr = Object.keys(flags).filter(f => flags[f]).join('');
+
+            try {
+                const regex = new RegExp(regexStr, flagStr);
+                errorEl.classList.remove('show');
+
+                // 匹配
+                const matches = [];
+                let m;
+                if (flags.g) {
+                    while ((m = regex.exec(testStr)) !== null) {
+                        matches.push({ value: m[0], index: m.index, groups: m.slice(1) });
+                        if (m[0].length === 0) regex.lastIndex++;
+                    }
+                } else {
+                    m = regex.exec(testStr);
+                    if (m) matches.push({ value: m[0], index: m.index, groups: m.slice(1) });
+                }
+
+                // 高亮
+                highlightMatches(testStr, matches);
+
+                // 匹配详情
+                document.getElementById('matchCount').textContent = `${matches.length} 个匹配`;
+                renderMatchDetails(matches);
+
+            } catch (e) {
+                errorEl.textContent = '❌ ' + e.message;
+                errorEl.classList.add('show');
+                document.getElementById('resultDisplay').textContent = testStr;
+                document.getElementById('matchesBody').innerHTML = '';
+                document.getElementById('matchCount').textContent = '错误';
+            }
+
+            explainRegex(regexStr);
+        }
+
+        function highlightMatches(text, matches) {
+            const display = document.getElementById('resultDisplay');
+            if (matches.length === 0) {
+                display.textContent = text;
+                return;
+            }
+
+            let html = '';
+            let lastIdx = 0;
+            const sorted = matches.sort((a,b) => a.index - b.index);
+
+            sorted.forEach(m => {
+                html += escHtml(text.slice(lastIdx, m.index));
+                html += `<span class="match-hl">${escHtml(m.value)}</span>`;
+                lastIdx = m.index + m.value.length;
+            });
+            html += escHtml(text.slice(lastIdx));
+            display.innerHTML = html;
+        }
+
+        function renderMatchDetails(matches) {
+            const body = document.getElementById('matchesBody');
+            if (matches.length === 0) {
+                body.innerHTML = '<div class="no-matches">无匹配结果</div>';
+                return;
+            }
+
+            let html = '<table class="match-table"><thead><tr><th>#</th><th>匹配值</th><th>位置</th><th>捕获组</th></tr></thead><tbody>';
+            matches.forEach((m, i) => {
+                const groups = m.groups.length > 0
+                    ? m.groups.map((g, j) => `<span class="match-grp">$${j+1}: "${g || ''}"</span>`).join(' ')
+                    : '<span style="color:#30363d;">—</span>';
+                html += `<tr>
+                    <td>${i+1}</td>
+                    <td><span class="match-val">"${escHtml(m.value)}"</span></td>
+                    <td><span class="match-idx">${m.index}</span></td>
+                    <td>${groups}</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            body.innerHTML = html;
+        }
+
+        // ========== 正则解释 ==========
+        function explainRegex(regexStr) {
+            const list = document.getElementById('explainList');
+            if (!regexStr) {
+                list.innerHTML = '<div style="color:#30363d;text-align:center;padding:16px;">输入正则后自动解析</div>';
+                return;
+            }
+
+            const tokens = tokenize(regexStr);
+            list.innerHTML = tokens.map(t => `
+                <div class="explain-item">
+                    <span class="explain-token">${escHtml(t.token)}</span>
+                    <span class="explain-desc">${t.desc}</span>
+                </div>
+            `).join('');
+        }
+
+        function tokenize(regex) {
+            const tokens = [];
+            let i = 0;
+            while (i < regex.length) {
+                const c = regex[i];
+                let token, desc;
+
+                if (c === '\\' && i+1 < regex.length) {
+                    token = regex.slice(i, i+2);
+                    const map = {'\\d':'数字 [0-9]','\\D':'非数字','\\w':'单词字符 [a-zA-Z0-9_]','\\W':'非单词字符','\\s':'空白字符','\\S':'非空白字符','\\b':'单词边界','\\B':'非单词边界','\\n':'换行符','\\t':'制表符'};
+                    desc = map[token] || `转义字符: ${token[1]}`;
+                    i += 2;
+                } else if (c === '[') {
+                    const end = regex.indexOf(']', i);
+                    token = regex.slice(i, end+1);
+                    desc = `字符集: 匹配其中任意一个字符`;
+                    i = end + 1;
+                } else if (c === '(') {
+                    if (regex.slice(i, i+3) === '(?:') { token = '(?:'; desc = '非捕获组开始'; i += 3; }
+                    else if (regex.slice(i, i+3) === '(?=') { token = '(?='; desc = '正向前瞻断言'; i += 3; }
+                    else if (regex.slice(i, i+3) === '(?!') { token = '(?!'; desc = '负向前瞻断言'; i += 3; }
+                    else { token = '('; desc = '捕获组开始'; i++; }
+                } else if (c === ')') { token = ')'; desc = '组结束'; i++; }
+                else if (c === '{') {
+                    const end = regex.indexOf('}', i);
+                    token = regex.slice(i, end+1);
+                    desc = `量词: 重复 ${token} 次`;
+                    i = end + 1;
+                } else if (c === '.') { token = '.'; desc = '匹配任意字符 (除换行符)'; i++; }
+                else if (c === '*') { token = '*'; desc = '零次或多次 (贪婪)'; i++; }
+                else if (c === '+') { token = '+'; desc = '一次或多次 (贪婪)'; i++; }
+                else if (c === '?') { token = '?'; desc = '零次或一次 / 非贪婪修饰'; i++; }
+                else if (c === '^') { token = '^'; desc = '行/字符串开头'; i++; }
+                else if (c === '$') { token = '$'; desc = '行/字符串结尾'; i++; }
+                else if (c === '|') { token = '|'; desc = '或 (alternation)'; i++; }
+                else { token = c; desc = `字面量字符: "${c}"`; i++; }
+
+                tokens.push({ token, desc });
+            }
+            return tokens;
+        }
+
+        // ========== Flags ==========
+        function toggleFlag(f) {
+            flags[f] = !flags[f];
+            document.getElementById('flag-' + f).classList.toggle('active', flags[f]);
+            runMatch();
+        }
+
+        // ========== 模板 ==========
+        function renderTemplates() {
+            document.getElementById('templateGrid').innerHTML = TEMPLATES.map((t, i) => `
+                <div class="template-item" onclick="loadTemplate(${i})">
+                    <div class="template-name">${t.name}</div>
+                    <div class="template-regex">${escHtml(t.regex)}</div>
+                </div>
+            `).join('');
+        }
+
+        function loadTemplate(i) {
+            const t = TEMPLATES[i];
+            document.getElementById('regexInput').value = t.regex;
+            document.getElementById('testText').value = t.test;
+            runMatch();
+            showToast(`📋 已加载: ${t.name}`);
+        }
+
+        // ========== 工具 ==========
+        function shareRegex() {
+            const regex = document.getElementById('regexInput').value;
+            const flagStr = Object.keys(flags).filter(f => flags[f]).join('');
+            const url = `${location.origin}${location.pathname}?r=${encodeURIComponent(regex)}&f=${flagStr}`;
+            navigator.clipboard.writeText(url).then(() => showToast('🔗 分享链接已复制'));
+        }
+
+        function clearAll() {
+            document.getElementById('regexInput').value = '';
+            document.getElementById('testText').value = '';
+            runMatch();
+        }
+
+        function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        // ========== URL 参数加载 ==========
+        function loadFromUrl() {
+            const params = new URLSearchParams(location.search);
+            if (params.has('r')) document.getElementById('regexInput').value = params.get('r');
+            if (params.has('f')) {
+                const f = params.get('f');
+                'gimsu'.split('').forEach(c => { flags[c] = f.includes(c); document.getElementById('flag-'+c).classList.toggle('active', flags[c]); });
+            }
+        }
+
+        // 初始化
+        renderTemplates();
+        loadFromUrl();
+        runMatch();
+    </script>
+</body>
+</html>
